@@ -17,6 +17,7 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
+    "@clack/prompts": "^0.6.3",
     "indicatorts": "^1.0.14",
     "ws": "^8.13.0"
   }
