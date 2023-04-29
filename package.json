@@ -1,0 +1,23 @@
+{
+  "name": "dema-strategy",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Trading strategy using DEMA values",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx index.ts",
+    "start": "tsx index.ts"
+  },
+  "keywords": [],
+  "author": "Anurag Roy <anuragroy@duck.com> (https://anuragroy.dev/)",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^18.16.2",
+    "tsx": "^3.12.6",
+    "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "indicatorts": "^1.0.14",
+    "ws": "^8.13.0"
+  }
+}
