@@ -6,19 +6,22 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx index.ts",
-    "start": "tsx index.ts"
+    "start": "tsx index.ts",
+    "getData": "tsx getData.ts"
   },
   "keywords": [],
   "author": "Anurag Roy <anuragroy@duck.com> (https://anuragroy.dev/)",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^18.16.2",
+    "@types/ws": "^8.5.4",
     "tsx": "^3.12.6",
     "typescript": "^5.0.4"
   },
   "dependencies": {
     "@clack/prompts": "^0.6.3",
     "indicatorts": "^1.0.14",
+    "jszip": "^3.10.1",
     "ws": "^8.13.0"
   }
 }

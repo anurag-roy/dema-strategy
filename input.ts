@@ -1,7 +1,7 @@
 import { cancel, group, intro, outro, select } from '@clack/prompts';
+import { DEMA_PERIODS } from './config.js';
 
-const demaPeriods = [20, 30, 40, 50, 60, 70, 80, 90];
-const periodOptions = demaPeriods.map((p) => ({
+const periodOptions = DEMA_PERIODS.map((p) => ({
   value: p,
   label: p.toString(),
 }));
