@@ -1,8 +1,10 @@
 import { writeFileSync } from 'fs';
 import JSZip from 'jszip';
-import { EXPIRY } from './config.js';
+import futures from './futures.json';
 
-const txtFileName = 'NFO_symbols.txt';
+const stocksToInclude = futures.map((f) => f.symbol);
+
+const txtFileName = 'NSE_symbols.txt';
 const zipFileName = txtFileName + '.zip';
 
 const res = await fetch('https://api.shoonya.com/' + zipFileName);
@@ -25,27 +27,21 @@ for (const row of rows) {
   const [
     _exchange,
     token,
-    lotSize,
+    _lotSize,
     symbol,
     tradingSymbol,
-    expiry,
     instrument,
-    _optiontype,
-    _strikePrice,
     _tickSize,
   ] = row.split(',');
 
-  if (instrument === 'FUTSTK' && expiry.endsWith(EXPIRY)) {
+  if (instrument === 'EQ' && stocksToInclude.includes(symbol)) {
     output.push({
       token,
-      lotSize,
       symbol,
       tradingSymbol,
     });
   }
 }
 
-output.sort((fut1, fut2) =>
-  fut1.tradingSymbol.localeCompare(fut2.tradingSymbol)
-);
-writeFileSync('fno.json', JSON.stringify(output));
+output.sort((eq1, eq2) => eq1.tradingSymbol.localeCompare(eq2.tradingSymbol));
+writeFileSync('equities.json', JSON.stringify(output));

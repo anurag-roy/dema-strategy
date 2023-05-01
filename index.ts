@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { MessageEvent, WebSocket } from 'ws';
 import env from './env.json';
-import futures from './fno.json';
+import equities from './equities.json';
 import { getInput } from './input.js';
 
 const { period1, period2, period3 } = await getInput();
@@ -32,13 +32,13 @@ ws.onerror = (error) => {
 
 ws.onmessage = (messageEvent: MessageEvent) => {
   const message = JSON.parse(messageEvent.data as string);
-  if (message.t === 'dk' || message.t === 'df') {
+  if (message.t === 'tk' || message.t === 'tf') {
   } else if (message.t === 'ck' && message.s === 'OK') {
     console.log('Connected successfully! Subscribing...');
     ws.send(
       JSON.stringify({
-        t: 'd',
-        k: futures.map((f) => `NFO|${f.token}`).join('#'),
+        t: 't',
+        k: equities.map((e) => `NSE|${e.token}`).join('#'),
       })
     );
   }
