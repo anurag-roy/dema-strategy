@@ -1,6 +1,6 @@
 import { writeFileSync } from 'fs';
 import JSZip from 'jszip';
-import { EXPIRY } from './config.js';
+import { EXPIRY, STOCKS_TO_EXCLUDE } from './config.js';
 
 const txtFileName = 'NFO_symbols.txt';
 const zipFileName = txtFileName + '.zip';
@@ -35,7 +35,11 @@ for (const row of rows) {
     _tickSize,
   ] = row.split(',');
 
-  if (instrument === 'FUTSTK' && expiry.endsWith(EXPIRY)) {
+  if (
+    instrument === 'FUTSTK' &&
+    !STOCKS_TO_EXCLUDE.includes(symbol) &&
+    expiry.endsWith(EXPIRY)
+  ) {
     output.push({
       token,
       lotSize,

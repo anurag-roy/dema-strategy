@@ -2,6 +2,7 @@ import { SingleBar } from 'cli-progress';
 import { dema } from 'indicatorts';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { setTimeout } from 'node:timers/promises';
 import { DEMA_PERIODS } from './config.js';
 import env from './env.json';
 import equities from './equities.json';
@@ -74,4 +75,7 @@ for (let i = 0; i < equities.length; i++) {
     join('data', `${equity.symbol}.json`),
     JSON.stringify(candles, null, 2)
   );
+
+  // Wait 1 second to avoid getting rate limited by Shoonya API
+  await setTimeout(1000);
 }
