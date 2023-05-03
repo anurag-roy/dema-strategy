@@ -1,9 +1,11 @@
+import { Exchange } from './types.js';
+
 type PlaceOrderParams = {
   jKey: string;
   jData: {
     uid: string;
     actid: string;
-    exch: 'NSE' | 'NFO' | 'CDS' | 'MCX' | 'BSE';
+    exch: Exchange;
     tsym: string;
     qty: string;
     prc: string;

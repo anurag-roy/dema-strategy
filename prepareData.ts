@@ -1,13 +1,11 @@
 import { SingleBar } from 'cli-progress';
-import { dema } from 'indicatorts';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
-import { DEMA_PERIODS } from './config.js';
 import env from './env.json';
 import equities from './equities.json';
 import { getHistoricalData } from './getHistoricalData.js';
-import { CandleWithDema } from './types.js';
+import { convertCandleToCandleWithDema } from './utils.js';
 
 const token = readFileSync('token.txt', 'utf-8');
 const START_TIME = '1640975400'; // 2022-01-01
@@ -41,28 +39,7 @@ for (let i = 0; i < equities.length; i++) {
   });
 
   // Convert values to numbers
-  const candles: CandleWithDema[] = historicalData
-    .map((c) => {
-      return {
-        time: c.time,
-        open: Number(c.into),
-        high: Number(c.inth),
-        low: Number(c.intl),
-        close: Number(c.intc),
-      };
-    })
-    .reverse()
-    .slice(-1000);
-  const closeValues = candles.map((c) => c.close);
-
-  // Calculate all dema values and populate the candles
-  for (const demaPeriod of DEMA_PERIODS) {
-    const demaValues = dema(demaPeriod, closeValues);
-    for (let j = 0; j < demaValues.length; j++) {
-      const demaValue = demaValues[j];
-      candles[j][`dema${demaPeriod}`] = demaValue;
-    }
-  }
+  const candles = convertCandleToCandleWithDema(historicalData);
 
   writeFileSync(
     join('data', `${equity.symbol}.json`),

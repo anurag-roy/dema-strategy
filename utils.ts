@@ -1,9 +1,54 @@
+import { dema } from 'indicatorts';
 import { createHash } from 'node:crypto';
-import { CandleWithDema } from './types.js';
+import { DEMA_PERIODS } from './config.js';
+import { Candle, CandleWithDema } from './types.js';
 
+/**
+ * Get the sha256 hash of a string
+ * @param input String to be hashed
+ * @returns the hashed string
+ */
 export const getHash = (input: string) =>
   createHash('sha256').update(input).digest('hex');
 
+/**
+ * Fifteen minutes in milliseconds
+ */
+export const FIFTEEN_MINUTES_IN_MS = 15 * 60 * 1000;
+
+/**
+ * Get how much time is left to the next candle i.e. the next
+ * 15th minute mark (10:15, 10:30, 10:45, etc) from the date given in input.
+ *
+ * @param date Date to be considered
+ * @returns the time in millis
+ */
+export const getTimeToNextCandle = (date: Date) => {
+  const currentMinute = date.getMinutes();
+
+  const offset = Math.floor(currentMinute / 15);
+  let nextMinute = (offset + 1) * 15;
+  nextMinute = nextMinute >= 60 ? 0 : nextMinute;
+
+  const nextCandleTime = new Date(date);
+  nextCandleTime.setMinutes(nextMinute);
+  nextCandleTime.setSeconds(1);
+  nextCandleTime.setMilliseconds(0);
+  if (nextMinute === 0) {
+    nextCandleTime.setHours(date.getHours() + 1);
+  }
+
+  return nextCandleTime.valueOf() - date.valueOf();
+};
+
+/**
+ * Get the DEMA values for the corresponding DEMA periods
+ * from a candle.
+ *
+ * @param candle Candle from which DEMA values will be plucked
+ * @param demaPeriods The DEMA periods for which the values will be plucked
+ * @returns the DEMA values in order of the provided DEMA periods
+ */
 export const getDemaValuesFromCandle = (
   candle: CandleWithDema,
   demaPeriods: [number, number, number]
@@ -61,4 +106,37 @@ export const isCandleB = (
   demaValues: [number, number, number]
 ) => {
   return demaValues.every((v) => isBodyTouching(candle, v));
+};
+
+/**
+ * Convert candles response from Shoonya API to candles with DEMA values
+ *
+ * @param data Candles response from Shoonya API
+ * @returns Candles with DEMA values populated for all DEMA periods.
+ */
+export const convertCandleToCandleWithDema = (data: Candle[]) => {
+  const candles: CandleWithDema[] = data
+    .map((c) => {
+      return {
+        time: c.time,
+        open: Number(c.into),
+        high: Number(c.inth),
+        low: Number(c.intl),
+        close: Number(c.intc),
+      };
+    })
+    .reverse()
+    .slice(-1000);
+  const closeValues = candles.map((c) => c.close);
+
+  // Calculate all dema values and populate the candles
+  for (const demaPeriod of DEMA_PERIODS) {
+    const demaValues = dema(demaPeriod, closeValues);
+    for (let j = 0; j < demaValues.length; j++) {
+      const demaValue = demaValues[j];
+      candles[j][`dema${demaPeriod}`] = demaValue;
+    }
+  }
+
+  return candles;
 };
