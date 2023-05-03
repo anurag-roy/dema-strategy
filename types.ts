@@ -1,6 +1,8 @@
-export type Candle = {
-  o: number;
-  h: number;
-  l: number;
-  c: number;
+export type CandleWithDema = {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  [key: `dema${number}`]: number;
 };

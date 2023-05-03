@@ -1,12 +1,49 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { MessageEvent, WebSocket } from 'ws';
 import env from './env.json';
 import equities from './equities.json';
 import { getInput } from './input.js';
+import { getDemaValuesFromCandle, isCandleA, isCandleB } from './utils.js';
+
+const accessToken = readFileSync('token.txt', 'utf-8');
 
 const { period1, period2, period3 } = await getInput();
 
-const accessToken = readFileSync('token.txt', 'utf-8');
+const candleACandidates = [];
+const candleBCandidates = [];
+
+for (const equity of equities) {
+  try {
+    const candlesJson = readFileSync(
+      join('data', `${equity.symbol}.json`),
+      'utf-8'
+    );
+    const [lastButOneCandle, lastCandle] = JSON.parse(candlesJson).slice(-2);
+    const lastButOneCandleDemaValues = getDemaValuesFromCandle(
+      lastButOneCandle,
+      [period1, period2, period3]
+    );
+    const lastCandleDemaValues = getDemaValuesFromCandle(lastCandle, [
+      period1,
+      period2,
+      period3,
+    ]);
+    if (
+      isCandleA(lastButOneCandle, lastButOneCandleDemaValues) &&
+      isCandleB(lastCandle, lastCandleDemaValues)
+    ) {
+      candleBCandidates.push(equity.symbol);
+    }
+    if (isCandleA(lastCandle, lastCandleDemaValues)) {
+      candleACandidates.push(equity.symbol);
+    }
+  } catch (error) {}
+}
+
+console.log('candleACandidates', candleACandidates);
+console.log('candleBCandidates', candleBCandidates);
+
 const ws = new WebSocket('wss://api.shoonya.com/NorenWSTP/');
 
 ws.onopen = () => {

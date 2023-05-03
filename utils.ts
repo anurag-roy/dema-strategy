@@ -1,8 +1,15 @@
 import { createHash } from 'node:crypto';
-import { Candle } from './types.js';
+import { CandleWithDema } from './types.js';
 
 export const getHash = (input: string) =>
   createHash('sha256').update(input).digest('hex');
+
+export const getDemaValuesFromCandle = (
+  candle: CandleWithDema,
+  demaPeriods: [number, number, number]
+) => {
+  return demaPeriods.map((p) => candle[`dema${p}`]) as [number, number, number];
+};
 
 /**
  * Determine if a dema value is touching any part of the candle
@@ -10,8 +17,8 @@ export const getHash = (input: string) =>
  * @param candle The candle to be considered
  * @param demaValue The DEMA value of the candle
  */
-export const isTouching = (candle: Candle, demaValue: number) =>
-  demaValue >= candle.l && demaValue <= candle.h;
+export const isTouching = (candle: CandleWithDema, demaValue: number) =>
+  demaValue >= candle.low && demaValue <= candle.high;
 
 /**
  * Determine if a dema value is touching the candle body
@@ -19,51 +26,39 @@ export const isTouching = (candle: Candle, demaValue: number) =>
  * @param candle The candle to be considered
  * @param demaValue The DEMA value of the candle
  */
-export const isBodyTouching = (candle: Candle, demaValue: number) => {
+export const isBodyTouching = (candle: CandleWithDema, demaValue: number) => {
   return (
-    (demaValue >= candle.o && demaValue <= candle.c) ||
-    (demaValue <= candle.o && demaValue >= candle.c)
+    (demaValue >= candle.open && demaValue <= candle.close) ||
+    (demaValue <= candle.open && demaValue >= candle.close)
   );
 };
 
 /**
  * Check if a candle satisfies condition A which is
- * the candle should not be touching any DEMA value and
- * all o,h,l,c values should be greater than all DEMA values
+ * the candle should not be touching any DEMA value
  *
  * @param candle The candle to be considered
  * @param demaValues Dema values for the candle
  * @returns true if the candle satisfies condition A, false otherwise.
  */
 export const isCandleA = (
-  candle: Candle,
+  candle: CandleWithDema,
   demaValues: [number, number, number]
 ) => {
-  return demaValues.every(
-    (v) =>
-      !isTouching(candle, v) &&
-      candle.o > v &&
-      candle.h > v &&
-      candle.l > v &&
-      candle.c > v
-  );
+  return demaValues.every((v) => !isTouching(candle, v));
 };
 
 /**
  * Check if a candle satisfies condition B which is
- * the candle body should touch all DEMA values and
- * the candle itself should be a red candle i.e.
- * close is lower than open
+ * the candle body should touch all DEMA values
  *
  * @param candle The candle to be considered
  * @param demaValues Dema values for the candle
  * @returns true if the candle satisfies condition B, false otherwise.
  */
 export const isCandleB = (
-  candle: Candle,
+  candle: CandleWithDema,
   demaValues: [number, number, number]
 ) => {
-  return (
-    candle.c < candle.o && demaValues.every((v) => isBodyTouching(candle, v))
-  );
+  return demaValues.every((v) => isBodyTouching(candle, v));
 };

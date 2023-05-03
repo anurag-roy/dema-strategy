@@ -7,15 +7,7 @@ import { DEMA_PERIODS } from './config.js';
 import env from './env.json';
 import equities from './equities.json';
 import { getHistoricalData } from './getHistoricalData.js';
-
-type CandleWithDema = {
-  time: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  [key: `dema${number}`]: number;
-};
+import { CandleWithDema } from './types.js';
 
 const token = readFileSync('token.txt', 'utf-8');
 const START_TIME = '1640975400'; // 2022-01-01
@@ -28,6 +20,7 @@ const progressBar = new SingleBar({
   barIncompleteChar: '\u2591',
   hideCursor: true,
   barCompleteString: 'Prepared data successfully!',
+  stopOnComplete: true,
 });
 progressBar.start(equities.length, 0);
 
