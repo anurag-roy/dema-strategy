@@ -1,6 +1,8 @@
+import { dema } from 'indicatorts';
 import { readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { DEMA_PERIODS } from './config.js';
 import env from './env.json';
 import equities from './equities.json';
 import { getHistoricalData } from './getHistoricalData.js';
@@ -10,7 +12,6 @@ import { placeOrder } from './placeOrder.js';
 import { CandleWithDema } from './types.js';
 import {
   FIFTEEN_MINUTES_IN_MS,
-  convertCandleToCandleWithDema,
   getDemaValuesFromCandle,
   getTimeToNextCandle,
   isCandleA,
@@ -117,62 +118,109 @@ const placeEntryOrder = async (
 };
 
 const timeToNextCandle = getTimeToNextCandle(new Date());
+console.log('Time to next candle in seconds:', timeToNextCandle / 1000);
 
-setTimeout(() => {
-  setInterval(async () => {
-    for (const c of candleAStocks) {
-      const stock = stockMap.get(c)!;
-      const candles = stockToCandleMap.get(c)!;
+const checkCandles = async () => {
+  // First priority: Check if Candle A candidates satisfied Candle B or not
+  for (const c of candleAStocks) {
+    const stock = stockMap.get(c)!;
+    const candles = stockToCandleMap.get(c)!;
 
-      getLatestCandle(stock.token).then(async (latestCandle) => {
-        if (latestCandle) {
-          // TODO: Create a function to calculate DEMA values from previous candle instead of requiring all 1000 historical candle data
-          //@ts-ignore
-          candles.push(latestCandle);
-          const latestCandleWithDema =
-            //@ts-ignore
-            convertCandleToCandleWithDema(candles).at(-1)!;
-          candles[candles.length - 1] = latestCandleWithDema;
-          const latestDemaValues = getDemaValuesFromCandle(
-            latestCandleWithDema,
-            demaPeriods
-          );
-          if (isCandleB(latestCandleWithDema, latestDemaValues)) {
-            // TODO: Check if greater than 20 and batch appropriately,
-            // TODO: else Shoonya will rate limit(20 API calls per second)
-            // TODO: In practice however, this should not be more than 20
-            placeEntryOrder(
-              stock.token,
-              stock.symbol,
-              latestCandleWithDema.close > latestCandleWithDema.open
-            );
-          }
+    // TODO: Place order for Candle B stocks (Only possible for last day candles, for which order needs to be placed st 9:15)
+
+    await getLatestCandle(stock.token).then(async (latestCandle) => {
+      if (latestCandle) {
+        // TODO: Create a function to calculate DEMA values from previous candle instead of requiring all 1000 historical candle data
+        const latestCandleWithDema: CandleWithDema = {
+          time: latestCandle.time,
+          open: Number(latestCandle.into),
+          high: Number(latestCandle.inth),
+          low: Number(latestCandle.intl),
+          close: Number(latestCandle.intc),
+        };
+        candles.push(latestCandleWithDema);
+
+        const closeValues = candles.map((c) => c.close);
+        // Calculate all dema values and populate the candles
+        for (const demaPeriod of DEMA_PERIODS) {
+          const demaValues = dema(demaPeriod, closeValues);
+          candles[candles.length - 1][`dema${demaPeriod}`] =
+            demaValues[candles.length - 1];
         }
-      });
+
+        const latestDemaValues = getDemaValuesFromCandle(
+          latestCandleWithDema,
+          demaPeriods
+        );
+        if (isCandleB(latestCandleWithDema, latestDemaValues)) {
+          console.log(`${stock.tradingSymbol} satisfied Candle B`);
+          // TODO: Check if greater than 20 and batch appropriately,
+          // TODO: else Shoonya will rate limit(20 API calls per second)
+          // TODO: In practice however, this should not be more than 20
+          placeEntryOrder(
+            stock.token,
+            stock.symbol,
+            latestCandleWithDema.close > latestCandleWithDema.open
+          );
+        } else {
+          console.log(`${stock.tradingSymbol} did not satisfy Candle B`);
+        }
+      }
+    });
+  }
+
+  // Fill latest candle and DEMA values for all other stocks
+  for (const [stockName, candles] of stockToCandleMap) {
+    // Ignore if the stock was a candle A candidate
+    if (candleAStocks.includes(stockName)) {
+      continue;
     }
 
-    candleAStocks = [];
-    for (const [stockName, candles] of stockToCandleMap) {
-      const stock = stockMap.get(stockName)!;
-      const latestCandle = await getLatestCandle(stock.token);
-      if (latestCandle) {
-        //@ts-ignore
-        candles.push(latestCandle);
-        const latestCandleWithDema =
-          //@ts-ignore
-          convertCandleToCandleWithDema(candles).at(-1)!;
-        candles[candles.length - 1] = latestCandleWithDema;
+    const stock = stockMap.get(stockName)!;
+    const latestCandle = await getLatestCandle(stock.token);
+    if (latestCandle) {
+      const latestCandleWithDema: CandleWithDema = {
+        time: latestCandle.time,
+        open: Number(latestCandle.into),
+        high: Number(latestCandle.inth),
+        low: Number(latestCandle.intl),
+        close: Number(latestCandle.intc),
+      };
+      candles.push(latestCandleWithDema);
 
-        if (isCandleA(latestCandleWithDema, demaPeriods)) {
-          candleAStocks.push(stockName);
-        }
-
-        await writeFile(
-          join('data', `${stockName}.json`),
-          JSON.stringify(candles),
-          'utf-8'
-        );
+      const closeValues = candles.map((c) => c.close);
+      // Calculate all dema values and populate the candles
+      for (const demaPeriod of DEMA_PERIODS) {
+        const demaValues = dema(demaPeriod, closeValues);
+        candles[candles.length - 1][`dema${demaPeriod}`] =
+          demaValues[candles.length - 1];
       }
     }
-  }, FIFTEEN_MINUTES_IN_MS);
+  }
+
+  // Recompute Candle A candidates
+  for (const [stockName, candles] of stockToCandleMap) {
+    const latestCandleWithDema = candles.at(-1)!;
+    const latestDemaValues = getDemaValuesFromCandle(
+      latestCandleWithDema,
+      demaPeriods
+    );
+
+    if (isCandleA(latestCandleWithDema, latestDemaValues)) {
+      candleAStocks.push(stockName);
+    }
+
+    await writeFile(
+      join('data', `${stockName}.json`),
+      JSON.stringify(candles),
+      'utf-8'
+    );
+  }
+
+  console.log('Updated candleAStocks', candleAStocks);
+};
+
+setTimeout(() => {
+  checkCandles();
+  setInterval(checkCandles, FIFTEEN_MINUTES_IN_MS);
 }, timeToNextCandle);

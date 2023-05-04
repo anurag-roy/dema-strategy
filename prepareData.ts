@@ -8,7 +8,7 @@ import { getHistoricalData } from './getHistoricalData.js';
 import { convertCandleToCandleWithDema } from './utils.js';
 
 const token = readFileSync('token.txt', 'utf-8');
-const START_TIME = '1640975400'; // 2022-01-01
+const START_TIME = '1651343400'; // 2022-05-01 00:00:00
 const END_TIME = Date.now().toString().slice(0, -3);
 
 console.log('Preparing data...');
@@ -19,6 +19,7 @@ const progressBar = new SingleBar({
   hideCursor: true,
   barCompleteString: 'Prepared data successfully!',
   stopOnComplete: true,
+  clearOnComplete: true,
 });
 progressBar.start(equities.length, 0);
 
@@ -40,12 +41,13 @@ for (let i = 0; i < equities.length; i++) {
 
   // Convert values to numbers
   const candles = convertCandleToCandleWithDema(historicalData);
-
+  // TODO: Handle incomplete candles better
+  candles.pop();
   writeFileSync(
     join('data', `${equity.symbol}.json`),
     JSON.stringify(candles, null, 2)
   );
 
-  // Wait 1 second to avoid getting rate limited by Shoonya API
-  await setTimeout(1000);
+  // Wait 500ms second to avoid getting rate limited by Shoonya API
+  await setTimeout(500);
 }

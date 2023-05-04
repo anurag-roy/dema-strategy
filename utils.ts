@@ -125,7 +125,6 @@ export const convertCandleToCandleWithDema = (data: Candle[]) => {
         close: Number(c.intc),
       };
     })
-    .reverse()
     .slice(-1000);
   const closeValues = candles.map((c) => c.close);
 

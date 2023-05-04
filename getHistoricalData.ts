@@ -22,5 +22,5 @@ export const getHistoricalData = async (params: GetHistoricalDataParams) => {
   }
   const candles: Candle[] = await res.json();
   // Ignore candles with 09:00:00 time
-  return candles.filter((c) => !c.time.endsWith('09:00:00'));
+  return candles.filter((c) => !c.time.endsWith('09:00:00')).reverse();
 };

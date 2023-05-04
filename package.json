@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "tsx index.ts",
     "start": "tsx index.ts",
+    "login": "tsx login.ts",
     "getData": "tsx getNfoData.ts && tsx getNseData.ts",
     "prepareData": "tsx prepareData.ts"
   },
