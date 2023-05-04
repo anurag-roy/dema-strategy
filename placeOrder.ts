@@ -1,6 +1,6 @@
-import { Exchange } from './types.js';
+import { ErrorResponse, Exchange, Order } from './types.js';
 
-type PlaceOrderParams = {
+export type PlaceOrderParams = {
   jKey: string;
   jData: {
     uid: string;
@@ -16,34 +16,29 @@ type PlaceOrderParams = {
   };
 };
 
-type Order =
-  | {
-      request_time: string;
-      stat: 'Ok';
-      norenordno: string;
-    }
-  | {
-      request_time: string;
-      stat: 'Not_Ok';
-      emsg: string;
-    };
-
 export const placeOrder = async (params: PlaceOrderParams) => {
   console.log(
-    `[${new Date().toLocaleTimeString()}] Placing order`,
-    params.jData
+    `[${new Date().toLocaleTimeString()}] Placing order for ${
+      params.jData.tsym
+    }`
   );
-  const res = await fetch('https://api.shoonya.com/NorenWClientTP/PlaceOrder', {
-    method: 'POST',
-    body: 'jData=' + JSON.stringify(params.jData) + `&jKey=${params.jKey}`,
-  });
-  if (!res.ok) {
-    throw new Error(await res.text());
+  try {
+    const res = await fetch(
+      'https://api.shoonya.com/NorenWClientTP/PlaceOrder',
+      {
+        method: 'POST',
+        body: 'jData=' + JSON.stringify(params.jData) + `&jKey=${params.jKey}`,
+      }
+    );
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+    const orderResult: Order | ErrorResponse = await res.json();
+    if (orderResult.stat === 'Not_Ok') {
+      throw new Error(orderResult.emsg);
+    }
+    console.log('Order placed successfully', orderResult);
+  } catch (error) {
+    console.error(`Failed to place order for ${params.jData.tsym}:`, error);
   }
-  const orderResult: Order = await res.json();
-  if (orderResult.stat === 'Not_Ok') {
-    throw new Error(orderResult.emsg);
-  }
-  console.log('Order placed successfully', orderResult);
-  return orderResult;
 };
