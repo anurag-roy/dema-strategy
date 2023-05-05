@@ -1,20 +1,6 @@
 import { dema } from 'indicatorts';
-import { createHash } from 'node:crypto';
-import { DEMA_PERIODS } from './config.js';
-import { Candle, CandleWithDema } from './types.js';
-
-/**
- * Get the sha256 hash of a string
- * @param input String to be hashed
- * @returns the hashed string
- */
-export const getHash = (input: string) =>
-  createHash('sha256').update(input).digest('hex');
-
-/**
- * Fifteen minutes in milliseconds
- */
-export const FIFTEEN_MINUTES_IN_MS = 15 * 60 * 1000;
+import { DEMA_PERIODS } from '../config.js';
+import type { Candle, CandleWithDema } from '../types/candle.js';
 
 /**
  * Get how much time is left to the next candle i.e. the next

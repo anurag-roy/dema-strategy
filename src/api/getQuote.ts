@@ -1,13 +1,5 @@
-import { ErrorResponse, Exchange, Quotes } from './types.js';
-
-export type QuoteParams = {
-  jKey: string;
-  jData: {
-    uid: string;
-    exch: Exchange;
-    token: string;
-  };
-};
+import { ErrorResponse } from '../types/common.js';
+import { QuoteParams, Quotes } from '../types/quote.js';
 
 export const getQuotes = async (params: QuoteParams) => {
   const res = await fetch('https://api.shoonya.com/NorenWClientTP/GetQuotes', {

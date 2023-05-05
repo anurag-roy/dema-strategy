@@ -1,39 +1,12 @@
-export type Exchange = 'NSE' | 'NFO' | 'CDS' | 'MCX' | 'BSE';
+import { Exchange } from './common.js';
 
-export type Candle = {
-  stat: string;
-  time: string;
-  ssboe: string;
-  into: string;
-  inth: string;
-  intl: string;
-  intc: string;
-  intvwap: string;
-  intv: string;
-  intoi: string;
-  v: string;
-  oi: string;
-};
-
-export type CandleWithDema = {
-  time: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  [key: `dema${number}`]: number;
-};
-
-export type ErrorResponse = {
-  request_time: string;
-  stat: 'Not_Ok';
-  emsg: string;
-};
-
-export type Order = {
-  request_time: string;
-  stat: 'Ok';
-  norenordno: string;
+export type QuoteParams = {
+  jKey: string;
+  jData: {
+    uid: string;
+    exch: Exchange;
+    token: string;
+  };
 };
 
 export type Quotes = {
@@ -48,7 +21,7 @@ export type Quotes = {
   /**
    * Exchange
    */
-  exch: 'NSE' | 'NFO' | 'CDS' | 'MCX' | 'BSE';
+  exch: Exchange;
   /**
    * Trading Symbol
    */
@@ -265,96 +238,4 @@ export type Quotes = {
    * Best Sell Order 5
    */
   so5: string;
-};
-
-export type TouchlineResponse = {
-  /**
-   * ‘tk’ represents connect acknowledgement
-   * ‘tf’ represents touchline feed
-   */
-  t: 'tk' | 'tf';
-  /**
-   * Exchange name
-   */
-  e: 'NSE' | 'NFO' | 'CDS' | 'MCX' | 'BSE';
-  /**
-   * Scrip Token
-   */
-  tk: string;
-  /**
-   * Price precision
-   */
-  pp: string;
-  /**
-   * Trading Symbol
-   */
-  ts: string;
-  /**
-   * Tick size
-   */
-  ti: string;
-  /**
-   * Lot size
-   */
-  ls: string;
-  /**
-   * LTP
-   */
-  lp: string;
-  /**
-   * Percentage change
-   */
-  pc: string;
-  /**
-   * volume
-   */
-  v: string;
-  /**
-   * Open price
-   */
-  o: string;
-  /**
-   * High price
-   */
-  h: string;
-  /**
-   * Low price
-   */
-  I: string;
-  /**
-   * Close price
-   */
-  c: string;
-  /**
-   * Average trade price
-   */
-  ap: string;
-  /**
-   * Open interest
-   */
-  oi: string;
-  /**
-   * Previous day closing Open Interest
-   */
-  poi: string;
-  /**
-   * Total open interest for underlying
-   */
-  toi: string;
-  /**
-   * Best Buy Quantity 1
-   */
-  bq1: string;
-  /**
-   * Best Buy Price 1
-   */
-  bp1: string;
-  /**
-   * Best Sell Quantity 1
-   */
-  sq1: string;
-  /**
-   * Best Sell Price 1
-   */
-  sp1: string;
 };

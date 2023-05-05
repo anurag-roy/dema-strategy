@@ -1,26 +1,25 @@
 import { dema } from 'indicatorts';
-import { readFileSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import env from '../env.json';
+import { getHistoricalData } from './api/getHistoricalData.js';
+import { getQuotes } from './api/getQuote.js';
+import { placeOrder } from './api/placeOrder.js';
 import { DEMA_PERIODS } from './config.js';
-import env from './env.json';
-import equities from './equities.json';
-import { getHistoricalData } from './getHistoricalData.js';
-import { getQuotes } from './getQuote.js';
-import { getInput } from './input.js';
-import { placeOrder } from './placeOrder.js';
-import { CandleWithDema } from './types.js';
+import equities from './data/equities.json';
+import type { CandleWithDema } from './types/candle.js';
 import {
-  FIFTEEN_MINUTES_IN_MS,
   getDemaValuesFromCandle,
   getTimeToNextCandle,
   isCandleA,
   isCandleB,
-} from './utils.js';
+} from './utils/candle-utils.js';
+import { getInput } from './utils/getInput.js';
 
 type Stock = (typeof equities)[0];
+const FIFTEEN_MINUTES_IN_MS = 15 * 60 * 1000;
 
-const accessToken = readFileSync('token.txt', 'utf-8');
+const accessToken = await readFile('token.txt', 'utf-8');
 const stockMap = new Map<string, Stock>();
 const stockToCandleMap = new Map<string, CandleWithDema[]>();
 let candleAStocks: string[] = [];
@@ -29,8 +28,8 @@ const candleBStocks: string[] = [];
 for (const equity of equities) {
   stockMap.set(equity.symbol, equity);
 
-  const candlesJson = readFileSync(
-    join('data', `${equity.symbol}.json`),
+  const candlesJson = await readFile(
+    join('src', 'data', `${equity.symbol}.json`),
     'utf-8'
   );
   const candles = JSON.parse(candlesJson);

@@ -2,10 +2,10 @@ import { SingleBar } from 'cli-progress';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
-import env from './env.json';
-import equities from './equities.json';
-import { getHistoricalData } from './getHistoricalData.js';
-import { convertCandleToCandleWithDema } from './utils.js';
+import env from '../../env.json';
+import { getHistoricalData } from '../api/getHistoricalData.js';
+import equities from '../data/equities.json';
+import { convertCandleToCandleWithDema } from '../utils/candle-utils.js';
 
 const token = readFileSync('token.txt', 'utf-8');
 const START_TIME = '1651343400'; // 2022-05-01 00:00:00
@@ -44,7 +44,7 @@ for (let i = 0; i < equities.length; i++) {
   // TODO: Handle incomplete candles better
   candles.pop();
   writeFileSync(
-    join('data', `${equity.symbol}.json`),
+    join('src', 'data', `${equity.symbol}.json`),
     JSON.stringify(candles, null, 2)
   );
 

@@ -131,4 +131,4 @@ dist
 
 env.json
 token.txt
-data/*.json
+src/data/*.json

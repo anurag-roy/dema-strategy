@@ -1,5 +1,5 @@
 import { cancel, group, intro, outro, select } from '@clack/prompts';
-import { DEMA_PERIODS } from './config.js';
+import { DEMA_PERIODS } from '../config.js';
 
 const periodOptions = DEMA_PERIODS.map((p) => ({
   value: p,
@@ -8,7 +8,7 @@ const periodOptions = DEMA_PERIODS.map((p) => ({
 
 export const getInput = async () => {
   intro('Please select the DEMA time periods you want to use');
-  const groupResults = await group(
+  const groupResults = await group<any>(
     {
       period1: ({ results }) =>
         select({

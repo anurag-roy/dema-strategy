@@ -1,6 +1,7 @@
-import { writeFileSync } from 'fs';
 import JSZip from 'jszip';
-import futures from './futures.json';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import futures from '../data/futures.json';
 
 const stocksToInclude = futures.map((f) => f.symbol);
 
@@ -48,4 +49,4 @@ for (const row of rows) {
 }
 
 output.sort((eq1, eq2) => eq1.tradingSymbol.localeCompare(eq2.tradingSymbol));
-writeFileSync('equities.json', JSON.stringify(output));
+writeFileSync(join('src', 'data', 'equities.json'), JSON.stringify(output));

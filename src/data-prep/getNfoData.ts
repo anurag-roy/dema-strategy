@@ -1,6 +1,7 @@
-import { writeFileSync } from 'fs';
 import JSZip from 'jszip';
-import { EXPIRY, STOCKS_TO_EXCLUDE } from './config.js';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { EXPIRY, STOCKS_TO_EXCLUDE } from '../config.js';
 
 const txtFileName = 'NFO_symbols.txt';
 const zipFileName = txtFileName + '.zip';
@@ -52,4 +53,4 @@ for (const row of rows) {
 output.sort((fut1, fut2) =>
   fut1.tradingSymbol.localeCompare(fut2.tradingSymbol)
 );
-writeFileSync('futures.json', JSON.stringify(output));
+writeFileSync(join('src', 'data', 'futures.json'), JSON.stringify(output));

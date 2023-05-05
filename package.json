@@ -7,9 +7,9 @@
   "scripts": {
     "dev": "tsx index.ts",
     "start": "tsx index.ts",
-    "login": "tsx login.ts",
-    "getData": "tsx getNfoData.ts && tsx getNseData.ts",
-    "prepareData": "tsx prepareData.ts"
+    "login": "tsx utils/login.ts",
+    "getData": "tsx data-prep/getNfoData.ts && tsx data-prep/getNseData.ts",
+    "prepareData": "tsx data-prep/prepareData.ts"
   },
   "keywords": [],
   "author": "Anurag Roy <anuragroy@duck.com> (https://anuragroy.dev/)",

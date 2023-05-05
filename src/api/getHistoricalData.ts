@@ -1,16 +1,4 @@
-import { Candle, Exchange } from './types.js';
-
-type GetHistoricalDataParams = {
-  jKey: string;
-  jData: {
-    uid: string;
-    exch: Exchange;
-    token: string;
-    st: string;
-    et: string;
-    intrv: '1' | '3' | '5' | '10' | '15' | '30' | '60' | '120' | '240';
-  };
-};
+import type { Candle, GetHistoricalDataParams } from '../types/candle.js';
 
 export const getHistoricalData = async (params: GetHistoricalDataParams) => {
   const res = await fetch('https://api.shoonya.com/NorenWClientTP/TPSeries', {

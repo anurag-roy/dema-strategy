@@ -1,8 +1,8 @@
 import { writeFileSync } from 'node:fs';
 import { stdin as input, stdout as output } from 'node:process';
 import * as readline from 'node:readline/promises';
-import env from './env.json';
-import { getHash } from './utils.js';
+import env from '../env.json';
+import { getHash } from './getHash.js';
 
 const rl = readline.createInterface({ input, output });
 const totp = await rl.question('Please enter TOTP to login: ');
