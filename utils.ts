@@ -57,15 +57,6 @@ export const getDemaValuesFromCandle = (
 };
 
 /**
- * Determine if a dema value is touching any part of the candle
- *
- * @param candle The candle to be considered
- * @param demaValue The DEMA value of the candle
- */
-export const isTouching = (candle: CandleWithDema, demaValue: number) =>
-  demaValue >= candle.low && demaValue <= candle.high;
-
-/**
  * Determine if a dema value is touching the candle body
  *
  * @param candle The candle to be considered
@@ -80,7 +71,9 @@ export const isBodyTouching = (candle: CandleWithDema, demaValue: number) => {
 
 /**
  * Check if a candle satisfies condition A which is
- * the candle should not be touching any DEMA value
+ * the candle should not be touching any DEMA values
+ * and all the values will be on a single side of the candle
+ * i.e. either all are below or all are above
  *
  * @param candle The candle to be considered
  * @param demaValues Dema values for the candle
@@ -90,7 +83,10 @@ export const isCandleA = (
   candle: CandleWithDema,
   demaValues: [number, number, number]
 ) => {
-  return demaValues.every((v) => !isTouching(candle, v));
+  return (
+    demaValues.every((v) => v < candle.low) ||
+    demaValues.every((v) => v > candle.high)
+  );
 };
 
 /**

@@ -35,11 +35,15 @@ for (const row of rows) {
   ] = row.split(',');
 
   if (instrument === 'EQ' && stocksToInclude.includes(symbol)) {
-    output.push({
-      token,
-      symbol,
-      tradingSymbol,
-    });
+    const futureEquivalent = futures.find((f) => f.symbol === symbol);
+    if (futureEquivalent) {
+      output.push({
+        token,
+        symbol,
+        tradingSymbol,
+        lotSize: futureEquivalent.lotSize,
+      });
+    }
   }
 }
 

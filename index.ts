@@ -18,8 +18,10 @@ import {
   isCandleB,
 } from './utils.js';
 
+type Stock = (typeof equities)[0];
+
 const accessToken = readFileSync('token.txt', 'utf-8');
-const stockMap = new Map<string, (typeof equities)[0]>();
+const stockMap = new Map<string, Stock>();
 const stockToCandleMap = new Map<string, CandleWithDema[]>();
 let candleAStocks: string[] = [];
 const candleBStocks: string[] = [];
@@ -79,30 +81,55 @@ const getLatestCandle = async (instrumentToken: string) => {
   return candles[0];
 };
 
-const placeEntryOrder = async (
-  instrumentToken: string,
-  tradingSymbol: string,
-  isGreenCandle: boolean
+const placeOrders = async (
+  stock: Stock,
+  isGreenCandle: boolean,
+  triggerPrice: string
 ) => {
   try {
+    // Get quotes
     const quotes = await getQuotes({
       jKey: accessToken,
       jData: {
         uid: env.USER_ID,
         exch: 'NSE',
-        token: instrumentToken,
+        token: stock.token,
       },
     });
 
+    // Place entry order
+    const entryPrice = isGreenCandle ? Number(quotes.sp1) : Number(quotes.bp1);
     placeOrder({
       jKey: accessToken,
       jData: {
         actid: env.USER_ID,
         uid: env.USER_ID,
         exch: 'NSE',
-        tsym: tradingSymbol,
+        tsym: stock.tradingSymbol,
         trantype: isGreenCandle ? 'B' : 'S',
-        prc: isGreenCandle ? quotes.sp1 : quotes.bp1,
+        prc: entryPrice.toString(),
+        trgprc: triggerPrice,
+        qty: '1',
+        prd: 'I',
+        prctyp: 'SL-LMT',
+        ret: 'DAY',
+      },
+    });
+
+    // Place exit order
+    const TARGET = 1000;
+    const exitPrice = isGreenCandle
+      ? ((entryPrice * stock.lotSize + TARGET) / stock.lotSize).toFixed(2)
+      : ((entryPrice * stock.lotSize - TARGET) / stock.lotSize).toFixed(2);
+    placeOrder({
+      jKey: accessToken,
+      jData: {
+        actid: env.USER_ID,
+        uid: env.USER_ID,
+        exch: 'NSE',
+        tsym: stock.tradingSymbol,
+        trantype: isGreenCandle ? 'S' : 'B',
+        prc: exitPrice,
         qty: '1',
         prd: 'I',
         prctyp: 'LMT',
@@ -111,7 +138,7 @@ const placeEntryOrder = async (
     });
   } catch (error) {
     console.error(
-      `Some error occured while placing entry order for ${tradingSymbol}:`,
+      `Some error occured while placing orders for ${stock.tradingSymbol}:`,
       error
     );
   }
@@ -121,7 +148,7 @@ const timeToNextCandle = getTimeToNextCandle(new Date());
 console.log('Time to next candle in seconds:', timeToNextCandle / 1000);
 
 const checkCandles = async () => {
-  // First priority: Check if Candle A candidates satisfied Candle B or not
+  // First priority: Check if Candle A candidates satisfy Candle B or not
   for (const c of candleAStocks) {
     const stock = stockMap.get(c)!;
     const candles = stockToCandleMap.get(c)!;
@@ -154,16 +181,21 @@ const checkCandles = async () => {
         );
         if (isCandleB(latestCandleWithDema, latestDemaValues)) {
           console.log(`${stock.tradingSymbol} satisfied Candle B`);
+          console.log({
+            open: latestCandleWithDema.open,
+            high: latestCandleWithDema.high,
+            low: latestCandleWithDema.low,
+            close: latestCandleWithDema.close,
+            demaValues: latestDemaValues,
+          });
           // TODO: Check if greater than 20 and batch appropriately,
           // TODO: else Shoonya will rate limit(20 API calls per second)
           // TODO: In practice however, this should not be more than 20
-          placeEntryOrder(
-            stock.token,
-            stock.symbol,
-            latestCandleWithDema.close > latestCandleWithDema.open
+          placeOrders(
+            stock,
+            latestCandleWithDema.close > latestCandleWithDema.open,
+            latestCandleWithDema.open.toString()
           );
-        } else {
-          console.log(`${stock.tradingSymbol} did not satisfy Candle B`);
         }
       }
     });
@@ -199,6 +231,7 @@ const checkCandles = async () => {
   }
 
   // Recompute Candle A candidates
+  candleAStocks = [];
   for (const [stockName, candles] of stockToCandleMap) {
     const latestCandleWithDema = candles.at(-1)!;
     const latestDemaValues = getDemaValuesFromCandle(
@@ -217,7 +250,7 @@ const checkCandles = async () => {
     );
   }
 
-  console.log('Updated candleAStocks', candleAStocks);
+  console.log('New candleAStocks', candleAStocks);
 };
 
 setTimeout(() => {

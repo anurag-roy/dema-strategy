@@ -42,7 +42,7 @@ for (const row of rows) {
   ) {
     output.push({
       token,
-      lotSize,
+      lotSize: Number(lotSize),
       symbol,
       tradingSymbol,
     });
