@@ -119,8 +119,9 @@ const placeOrders = async (
     // Place exit order
     const TARGET = 1000;
     const exitPrice = isGreenCandle
-      ? ((entryPrice * stock.lotSize + TARGET) / stock.lotSize).toFixed(2)
-      : ((entryPrice * stock.lotSize - TARGET) / stock.lotSize).toFixed(2);
+      ? (entryPrice * stock.lotSize + TARGET) / stock.lotSize
+      : (entryPrice * stock.lotSize - TARGET) / stock.lotSize;
+    const roundedUpExitPrice = (0.05 * Math.round(exitPrice / 0.05)).toFixed(2);
     placeOrder({
       jKey: accessToken,
       jData: {
@@ -129,7 +130,7 @@ const placeOrders = async (
         exch: 'NSE',
         tsym: stock.tradingSymbol,
         trantype: isGreenCandle ? 'S' : 'B',
-        prc: exitPrice,
+        prc: roundedUpExitPrice,
         qty: '1',
         prd: 'I',
         prctyp: 'LMT',
