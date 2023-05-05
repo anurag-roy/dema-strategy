@@ -1,14 +1,13 @@
 import { SingleBar } from 'cli-progress';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { setTimeout } from 'node:timers/promises';
 import env from './env.json';
 import equities from './equities.json';
 import { getHistoricalData } from './getHistoricalData.js';
 import { convertCandleToCandleWithDema } from './utils.js';
 
 const token = readFileSync('token.txt', 'utf-8');
-const START_TIME = '1651343400'; // 2022-05-01 00:00:00
+const START_TIME = '1672511400'; // 2023-01-01 00:00:00
 const END_TIME = Date.now().toString().slice(0, -3);
 
 console.log('Preparing data...');
@@ -43,11 +42,5 @@ for (let i = 0; i < equities.length; i++) {
   const candles = convertCandleToCandleWithDema(historicalData);
   // TODO: Handle incomplete candles better
   candles.pop();
-  writeFileSync(
-    join('data', `${equity.symbol}.json`),
-    JSON.stringify(candles, null, 2)
-  );
-
-  // Wait 500ms second to avoid getting rate limited by Shoonya API
-  await setTimeout(500);
+  writeFileSync(join('data', `${equity.symbol}.json`), JSON.stringify(candles));
 }
