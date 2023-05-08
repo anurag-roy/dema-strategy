@@ -28,6 +28,7 @@ export const STOCKS_TO_EXCLUDE = [
   'DALBHARAT',
   'DEEPAKNTR',
   'DIVISLAB',
+  'DIXON',
   'DRREDDY',
   'GLENMARK',
   'GODREJCP',
@@ -76,5 +77,8 @@ export const STOCKS_TO_EXCLUDE = [
   'TATAPOWER',
   'TATASTEEL',
   'TCS',
+  'TECHM',
+  'TITAN',
+  'TORNTPHARM',
   'ULTRACEMCO',
 ];

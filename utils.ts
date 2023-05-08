@@ -32,7 +32,7 @@ export const getTimeToNextCandle = (date: Date) => {
 
   const nextCandleTime = new Date(date);
   nextCandleTime.setMinutes(nextMinute);
-  nextCandleTime.setSeconds(1);
+  nextCandleTime.setSeconds(0);
   nextCandleTime.setMilliseconds(0);
   if (nextMinute === 0) {
     nextCandleTime.setHours(date.getHours() + 1);
