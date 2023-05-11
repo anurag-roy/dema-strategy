@@ -38,7 +38,7 @@ for (const equity of equities) {
   stockToCandleMap.set(equity.symbol, candles);
 }
 
-const { target, period1, period2, period3 } = await getInput();
+const { entryTarget, exitTarget, period1, period2, period3 } = await getInput();
 const demaPeriods = [period1, period2, period3] as [number, number, number];
 const lastTimes = new Set<string>();
 
@@ -103,7 +103,7 @@ const placeOrders = async (
 
     // Place entry order
     const entryPrice = isGreenCandle ? Number(quotes.sp1) : Number(quotes.bp1);
-    const quantity = Math.floor(target / entryPrice).toString();
+    const quantity = Math.floor(entryTarget / entryPrice).toString();
     placeOrder({
       jKey: accessToken,
       jData: {
@@ -122,10 +122,9 @@ const placeOrders = async (
     });
 
     // Place exit order
-    const TARGET = 1000;
     const exitPrice = isGreenCandle
-      ? (entryPrice * stock.lotSize + TARGET) / stock.lotSize
-      : (entryPrice * stock.lotSize - TARGET) / stock.lotSize;
+      ? (entryPrice * Number(quantity) + exitTarget) / Number(quantity)
+      : (entryPrice * Number(quantity) - exitTarget) / Number(quantity);
     const roundedUpExitPrice = (0.05 * Math.round(exitPrice / 0.05)).toFixed(2);
     placeOrder({
       jKey: accessToken,
@@ -158,6 +157,7 @@ const checkCandles = async () => {
   const CHUNK_SIZE = 12;
   const chunks = chunk(candleAStocks, CHUNK_SIZE);
 
+  // First priority: Check if Candle A candidates satisfy Candle B or not
   for (const chunk of chunks) {
     promises.push(
       ...chunk.map(async (c) => {
@@ -210,59 +210,6 @@ const checkCandles = async () => {
     );
     await Promise.allSettled(promises);
     promises = [];
-  }
-
-  // First priority: Check if Candle A candidates satisfy Candle B or not
-  for (const c of candleAStocks) {
-    const stock = stockMap.get(c)!;
-    const candles = stockToCandleMap.get(c)!;
-
-    // TODO: Place order for Candle B stocks (Only possible for last day candles, for which order needs to be placed st 9:15)
-
-    await getLatestCandle(stock.token).then(async (latestCandle) => {
-      if (latestCandle) {
-        // TODO: Create a function to calculate DEMA values from previous candle instead of requiring all 1000 historical candle data
-        const latestCandleWithDema: CandleWithDema = {
-          time: latestCandle.time,
-          open: Number(latestCandle.into),
-          high: Number(latestCandle.inth),
-          low: Number(latestCandle.intl),
-          close: Number(latestCandle.intc),
-        };
-        candles.push(latestCandleWithDema);
-
-        const closeValues = candles.map((c) => c.close);
-        // Calculate all dema values and populate the candles
-        for (const demaPeriod of DEMA_PERIODS) {
-          const demaValues = dema(demaPeriod, closeValues);
-          candles[candles.length - 1][`dema${demaPeriod}`] =
-            demaValues[candles.length - 1];
-        }
-
-        const latestDemaValues = getDemaValuesFromCandle(
-          latestCandleWithDema,
-          demaPeriods
-        );
-        if (isCandleB(latestCandleWithDema, latestDemaValues)) {
-          console.log(`${stock.tradingSymbol} satisfied Candle B`);
-          console.log({
-            open: latestCandleWithDema.open,
-            high: latestCandleWithDema.high,
-            low: latestCandleWithDema.low,
-            close: latestCandleWithDema.close,
-            demaValues: latestDemaValues,
-          });
-          // TODO: Check if greater than 20 and batch appropriately,
-          // TODO: else Shoonya will rate limit(20 API calls per second)
-          // TODO: In practice however, this should not be more than 20
-          placeOrders(
-            stock,
-            latestCandleWithDema.close > latestCandleWithDema.open,
-            latestCandleWithDema.open.toString()
-          );
-        }
-      }
-    });
   }
 
   // Fill latest candle and DEMA values for all other stocks

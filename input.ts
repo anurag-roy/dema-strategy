@@ -10,9 +10,13 @@ export const getInput = async () => {
   intro('Please select the DEMA time periods you want to use');
   const groupResults = await group(
     {
-      target: () =>
+      entryTarget: () =>
         text({
-          message: 'Please enter the target input',
+          message: 'Please enter the entry target',
+        }),
+      exitTarget: () =>
+        text({
+          message: 'Please enter the exit target',
         }),
       period1: ({ results }) =>
         select({
@@ -41,10 +45,17 @@ export const getInput = async () => {
   );
   outro('Starting the strategy...');
 
-  const { target, ...rest } = groupResults;
+  const { entryTarget, exitTarget, ...rest } = groupResults;
 
   return {
-    target: parseFloat(target),
+    entryTarget: parseFloat(entryTarget),
+    exitTarget: parseFloat(exitTarget),
     ...rest,
-  } as { target: number; period1: number; period2: number; period3: number };
+  } as {
+    entryTarget: number;
+    exitTarget: number;
+    period1: number;
+    period2: number;
+    period3: number;
+  };
 };
