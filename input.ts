@@ -1,4 +1,4 @@
-import { cancel, group, intro, outro, select } from '@clack/prompts';
+import { cancel, group, intro, outro, select, text } from '@clack/prompts';
 import { DEMA_PERIODS } from './config.js';
 
 const periodOptions = DEMA_PERIODS.map((p) => ({
@@ -10,6 +10,10 @@ export const getInput = async () => {
   intro('Please select the DEMA time periods you want to use');
   const groupResults = await group(
     {
+      target: () =>
+        text({
+          message: 'Please enter the target input',
+        }),
       period1: ({ results }) =>
         select({
           message: 'DEMA Period 1',
@@ -37,5 +41,10 @@ export const getInput = async () => {
   );
   outro('Starting the strategy...');
 
-  return groupResults as { period1: number; period2: number; period3: number };
+  const { target, ...rest } = groupResults;
+
+  return {
+    target: parseFloat(target),
+    ...rest,
+  } as { target: number; period1: number; period2: number; period3: number };
 };

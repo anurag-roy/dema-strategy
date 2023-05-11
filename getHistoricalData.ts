@@ -1,4 +1,5 @@
 import { Candle, Exchange } from './types.js';
+import { FIFTEEN_MINUTES_IN_MS } from './utils.js';
 
 type GetHistoricalDataParams = {
   jKey: string;
@@ -20,7 +21,23 @@ export const getHistoricalData = async (params: GetHistoricalDataParams) => {
   if (!res.ok) {
     throw new Error(await res.text());
   }
-  const candles: Candle[] = await res.json();
+  let candles: Candle[] = await res.json();
+
   // Ignore candles with 09:00:00 time
-  return candles.filter((c) => !c.time.endsWith('09:00:00')).reverse();
+  candles = candles.filter((c) => !c.time.endsWith('09:00:00')).reverse();
+
+  // Check if last candle is complete or incomplete
+  const lastCandle = candles.at(-1);
+  if (lastCandle) {
+    const [day, month, ...rest] = lastCandle.time.split('-');
+    const reformattedDateString = [month, day, ...rest].join('-');
+    const millis = new Date(reformattedDateString).getTime();
+
+    if (Date.now() - millis < FIFTEEN_MINUTES_IN_MS) {
+      // Last candle is incomplete
+      candles = candles.slice(0, -1);
+    }
+  }
+
+  return candles;
 };

@@ -107,31 +107,51 @@ export const isCandleB = (
 /**
  * Convert candles response from Shoonya API to candles with DEMA values
  *
- * @param data Candles response from Shoonya API
- * @returns Candles with DEMA values populated for all DEMA periods.
+ * @param existingCandles Existing candles with DEMA values already calculated
+ * @param newCandles New candles from from Shoonya API response
+ * @returns All candles after converting the new candles
  */
-export const convertCandleToCandleWithDema = (data: Candle[]) => {
-  const candles: CandleWithDema[] = data
-    .map((c) => {
-      return {
-        time: c.time,
-        open: Number(c.into),
-        high: Number(c.inth),
-        low: Number(c.intl),
-        close: Number(c.intc),
-      };
-    })
-    .slice(-1000);
+export const ingestNewCandles = (
+  existingCandles: CandleWithDema[],
+  newCandles: Candle[]
+) => {
+  let candles = [...existingCandles];
+  for (const candle of newCandles) {
+    const existingCandle = candles.find((c) => c.time === candle.time);
+    if (!existingCandle) {
+      candles.push({
+        time: candle.time,
+        open: Number(candle.into),
+        high: Number(candle.inth),
+        low: Number(candle.intl),
+        close: Number(candle.intc),
+      });
+    }
+  }
+  candles = candles.slice(-1000);
   const closeValues = candles.map((c) => c.close);
-
   // Calculate all dema values and populate the candles
   for (const demaPeriod of DEMA_PERIODS) {
     const demaValues = dema(demaPeriod, closeValues);
-    for (let j = 0; j < demaValues.length; j++) {
-      const demaValue = demaValues[j];
-      candles[j][`dema${demaPeriod}`] = demaValue;
+    for (let i = 0; i < demaValues.length; i++) {
+      const demaValue = demaValues[i];
+      candles[i][`dema${demaPeriod}`] = demaValue;
     }
   }
 
   return candles;
+};
+
+/**
+ * Get the time from the candle. The time is formatted in the way
+ * Shoonya historical API accepts staartTime and endTime.
+ *
+ * @param candle Candle to get time from
+ * @returns The time in seconds as a string
+ */
+export const getTimeFromCandle = (candle: CandleWithDema) => {
+  const [day, month, ...rest] = candle.time.split('-');
+  const reformattedDateString = [month, day, ...rest].join('-');
+  const millis = new Date(reformattedDateString).getTime();
+  return millis.toString().slice(0, -3);
 };

@@ -1,4 +1,5 @@
 import { dema } from 'indicatorts';
+import { chunk } from 'lodash-es';
 import { readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -37,11 +38,13 @@ for (const equity of equities) {
   stockToCandleMap.set(equity.symbol, candles);
 }
 
-const { period1, period2, period3 } = await getInput();
+const { target, period1, period2, period3 } = await getInput();
 const demaPeriods = [period1, period2, period3] as [number, number, number];
+const lastTimes = new Set<string>();
 
 for (const [key, value] of stockToCandleMap) {
   const [lastButOneCandle, lastCandle] = value.slice(-2);
+  lastTimes.add(lastCandle.time);
   const lastButOneCandleDemaValues = getDemaValuesFromCandle(
     lastButOneCandle,
     demaPeriods
@@ -58,6 +61,7 @@ for (const [key, value] of stockToCandleMap) {
   }
 }
 
+console.log('Last times are', lastTimes);
 console.log('Initial candleAStocks', candleAStocks);
 console.log('Initial candleBStocks', candleBStocks);
 
@@ -99,6 +103,7 @@ const placeOrders = async (
 
     // Place entry order
     const entryPrice = isGreenCandle ? Number(quotes.sp1) : Number(quotes.bp1);
+    const quantity = Math.floor(target / entryPrice).toString();
     placeOrder({
       jKey: accessToken,
       jData: {
@@ -109,7 +114,7 @@ const placeOrders = async (
         trantype: isGreenCandle ? 'B' : 'S',
         prc: entryPrice.toString(),
         trgprc: triggerPrice,
-        qty: '1',
+        qty: quantity,
         prd: 'I',
         prctyp: 'SL-LMT',
         ret: 'DAY',
@@ -131,7 +136,7 @@ const placeOrders = async (
         tsym: stock.tradingSymbol,
         trantype: isGreenCandle ? 'S' : 'B',
         prc: roundedUpExitPrice,
-        qty: '1',
+        qty: quantity,
         prd: 'I',
         prctyp: 'LMT',
         ret: 'DAY',
@@ -149,6 +154,64 @@ const timeToNextCandle = getTimeToNextCandle(new Date());
 console.log('Time to next candle in seconds:', timeToNextCandle / 1000);
 
 const checkCandles = async () => {
+  let promises: Promise<void>[] = [];
+  const CHUNK_SIZE = 12;
+  const chunks = chunk(candleAStocks, CHUNK_SIZE);
+
+  for (const chunk of chunks) {
+    promises.push(
+      ...chunk.map(async (c) => {
+        const stock = stockMap.get(c)!;
+        const candles = stockToCandleMap.get(c)!;
+
+        // TODO: Place order for Candle B stocks (Only possible for last day candles, for which order needs to be placed st 9:15)
+
+        const latestCandle = await getLatestCandle(stock.token);
+        if (latestCandle) {
+          // TODO: Create a function to calculate DEMA values from previous candle instead of requiring all 1000 historical candle data
+          const latestCandleWithDema: CandleWithDema = {
+            time: latestCandle.time,
+            open: Number(latestCandle.into),
+            high: Number(latestCandle.inth),
+            low: Number(latestCandle.intl),
+            close: Number(latestCandle.intc),
+          };
+          candles.push(latestCandleWithDema);
+
+          const closeValues = candles.map((c) => c.close);
+          // Calculate all dema values and populate the candles
+          for (const demaPeriod of DEMA_PERIODS) {
+            const demaValues = dema(demaPeriod, closeValues);
+            candles[candles.length - 1][`dema${demaPeriod}`] =
+              demaValues[candles.length - 1];
+          }
+
+          const latestDemaValues = getDemaValuesFromCandle(
+            latestCandleWithDema,
+            demaPeriods
+          );
+          if (isCandleB(latestCandleWithDema, latestDemaValues)) {
+            console.log(`${stock.tradingSymbol} satisfied Candle B`);
+            console.log({
+              open: latestCandleWithDema.open,
+              high: latestCandleWithDema.high,
+              low: latestCandleWithDema.low,
+              close: latestCandleWithDema.close,
+              demaValues: latestDemaValues,
+            });
+            placeOrders(
+              stock,
+              latestCandleWithDema.close > latestCandleWithDema.open,
+              latestCandleWithDema.open.toString()
+            );
+          }
+        }
+      })
+    );
+    await Promise.allSettled(promises);
+    promises = [];
+  }
+
   // First priority: Check if Candle A candidates satisfy Candle B or not
   for (const c of candleAStocks) {
     const stock = stockMap.get(c)!;
