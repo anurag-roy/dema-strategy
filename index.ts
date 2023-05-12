@@ -104,6 +104,12 @@ const placeOrders = async (
     // Place entry order
     const entryPrice = isGreenCandle ? Number(quotes.sp1) : Number(quotes.bp1);
     const quantity = Math.floor(entryTarget / entryPrice).toString();
+
+    if (quantity === '0') {
+      console.log('Quantity is 0. Order not placed for', stock.tradingSymbol);
+      return;
+    }
+
     placeOrder({
       jKey: accessToken,
       jData: {
