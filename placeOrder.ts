@@ -23,6 +23,7 @@ export const placeOrder = async (params: PlaceOrderParams) => {
       params.jData.tsym
     }`
   );
+  params.jData.tsym = encodeURIComponent(params.jData.tsym);
   try {
     const res = await fetch(
       'https://api.shoonya.com/NorenWClientTP/PlaceOrder',
