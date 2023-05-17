@@ -119,10 +119,9 @@ const placeOrders = async (
         tsym: stock.tradingSymbol,
         trantype: isGreenCandle ? 'B' : 'S',
         prc: entryPrice.toString(),
-        trgprc: triggerPrice,
         qty: quantity,
         prd: 'I',
-        prctyp: 'SL-LMT',
+        prctyp: 'LMT',
         ret: 'DAY',
       },
     });
@@ -132,6 +131,26 @@ const placeOrders = async (
       ? (entryPrice * Number(quantity) + exitTarget) / Number(quantity)
       : (entryPrice * Number(quantity) - exitTarget) / Number(quantity);
     const roundedUpExitPrice = (0.05 * Math.round(exitPrice / 0.05)).toFixed(2);
+
+    // SL Order
+    placeOrder({
+      jKey: accessToken,
+      jData: {
+        actid: env.USER_ID,
+        uid: env.USER_ID,
+        exch: 'NSE',
+        tsym: stock.tradingSymbol,
+        trantype: isGreenCandle ? 'S' : 'B',
+        prc: triggerPrice,
+        trgprc: triggerPrice,
+        qty: quantity,
+        prd: 'I',
+        prctyp: 'SL-LMT',
+        ret: 'DAY',
+      },
+    });
+
+    // Normal Exit Order
     placeOrder({
       jKey: accessToken,
       jData: {
