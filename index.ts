@@ -3,7 +3,7 @@ import { chunk } from 'lodash-es';
 import { readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { DEMA_PERIODS } from './config.js';
+import { DEMA_PERIODS, REVERSE_STOCKS } from './config.js';
 import env from './env.json';
 import equities from './equities.json';
 import { getHistoricalData } from './getHistoricalData.js';
@@ -21,6 +21,15 @@ import {
 
 type Stock = (typeof equities)[0];
 
+const TODAY_TWO_THIRTY = (() => {
+  const date = new Date();
+  date.setHours(14);
+  date.setMinutes(30);
+  date.setSeconds(0);
+  date.setMilliseconds(0);
+
+  return date.valueOf();
+})();
 const accessToken = readFileSync('token.txt', 'utf-8');
 const stockMap = new Map<string, Stock>();
 const stockToCandleMap = new Map<string, CandleWithDema[]>();
@@ -224,9 +233,14 @@ const checkCandles = async () => {
               close: latestCandleWithDema.close,
               demaValues: latestDemaValues,
             });
+            const isOpposite =
+              REVERSE_STOCKS.includes(stock.symbol) ||
+              Date.now() > TODAY_TWO_THIRTY;
             placeOrders(
               stock,
-              latestCandleWithDema.close > latestCandleWithDema.open,
+              isOpposite
+                ? latestCandleWithDema.close < latestCandleWithDema.open
+                : latestCandleWithDema.close > latestCandleWithDema.open,
               latestCandleWithDema.open.toString()
             );
           }
