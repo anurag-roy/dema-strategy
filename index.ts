@@ -102,7 +102,7 @@ const placeOrders = async (
     });
 
     // Place entry order
-    const entryPrice = isGreenCandle ? Number(quotes.sp1) : Number(quotes.bp1);
+    const entryPrice = isGreenCandle ? Number(quotes.bp1) : Number(quotes.sp1);
     const quantity = Math.floor(entryTarget / entryPrice).toString();
 
     if (quantity === '0') {
