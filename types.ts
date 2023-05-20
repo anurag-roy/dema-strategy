@@ -1,3 +1,11 @@
+export const STRATEGY_TYPE = {
+  MIS: 'MIS',
+  CNC: 'CNC',
+  FUTURE: 'FUTURE',
+  OPTION: 'OPTION',
+} as const;
+export type StrategyType = keyof typeof STRATEGY_TYPE;
+
 export type Exchange = 'NSE' | 'NFO' | 'CDS' | 'MCX' | 'BSE';
 
 export type Candle = {

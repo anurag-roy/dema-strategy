@@ -155,3 +155,39 @@ export const getTimeFromCandle = (candle: CandleWithDema) => {
   const millis = new Date(reformattedDateString).getTime();
   return millis.toString().slice(0, -3);
 };
+
+const getMonthName = (monthIndex: number) => {
+  // Adjust from 0 based month to irl month index
+  const numericMonth = (monthIndex + 1).toString();
+  const monthDate = new Date(numericMonth);
+  return Intl.DateTimeFormat('en', { month: 'short' })
+    .format(monthDate)
+    .toUpperCase();
+};
+
+export const getExpiryOptions = () => {
+  const EXPIRY_OPTION_LENGTH = 3;
+
+  const date = new Date();
+  let currentMonthIndex = date.getMonth();
+  let currentYear = date.getFullYear();
+
+  const options: string[] = [];
+
+  for (let i = 0; i < EXPIRY_OPTION_LENGTH; i++) {
+    options.push(`${getMonthName(currentMonthIndex)}-${currentYear}`);
+
+    currentMonthIndex = currentMonthIndex + 1;
+    if (currentMonthIndex > 11) {
+      currentMonthIndex = 0;
+      currentYear = currentYear + 1;
+    }
+  }
+
+  return options;
+};
+
+export const optionMapper = <T>(option: T) => ({
+  value: option,
+  label: `${option}`,
+});

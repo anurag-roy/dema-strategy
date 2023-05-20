@@ -1,22 +1,34 @@
 import { cancel, group, intro, outro, select, text } from '@clack/prompts';
 import { DEMA_PERIODS } from './config.js';
+import { STRATEGY_TYPE, StrategyType } from './types.js';
+import { getExpiryOptions, optionMapper } from './utils.js';
 
-const periodOptions = DEMA_PERIODS.map((p) => ({
-  value: p,
-  label: p.toString(),
-}));
+const periodOptions = DEMA_PERIODS.map(optionMapper);
 
 export const getInput = async () => {
-  intro('Please select the DEMA time periods you want to use');
+  intro('Please provide the required inputs to start the program');
   const groupResults = await group(
     {
+      type: ({ results }) =>
+        select({
+          message: 'Strategy type',
+          options: Object.values(STRATEGY_TYPE).map(optionMapper),
+        }),
+      expiry: ({ results }) => {
+        if (results.type === STRATEGY_TYPE.FUTURE) {
+          return select({
+            message: 'Expiry',
+            options: getExpiryOptions().map(optionMapper),
+          });
+        }
+      },
       entryTarget: () =>
         text({
-          message: 'Please enter the entry target',
+          message: 'Entry target',
         }),
       exitTarget: () =>
         text({
-          message: 'Please enter the exit target',
+          message: 'Exit target',
         }),
       period1: ({ results }) =>
         select({
@@ -43,7 +55,7 @@ export const getInput = async () => {
       },
     }
   );
-  outro('Starting the strategy...');
+  outro(`Starting strategy for ${groupResults.type}...`);
 
   const { entryTarget, exitTarget, ...rest } = groupResults;
 
@@ -52,6 +64,8 @@ export const getInput = async () => {
     exitTarget: parseFloat(exitTarget),
     ...rest,
   } as {
+    type: StrategyType;
+    expiry: string | undefined;
     entryTarget: number;
     exitTarget: number;
     period1: number;
