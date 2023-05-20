@@ -47,7 +47,8 @@ for (const equity of equities) {
   stockToCandleMap.set(equity.symbol, candles);
 }
 
-const { entryTarget, exitTarget, period1, period2, period3 } = await getInput();
+const { type, expiry, entryTarget, exitTarget, period1, period2, period3 } =
+  await getInput();
 const demaPeriods = [period1, period2, period3] as [number, number, number];
 const lastTimes = new Set<string>();
 
@@ -99,6 +100,13 @@ const placeOrders = async (
   isGreenCandle: boolean,
   triggerPrice: string
 ) => {
+  if (type === 'CNC' && !isGreenCandle) {
+    console.log(
+      `Not placing order for ${stock.symbol} since current strategy type is CNC.`
+    );
+    return;
+  }
+
   try {
     // Get quotes
     const quotes = await getQuotes({
