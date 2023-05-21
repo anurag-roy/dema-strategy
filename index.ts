@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { DEMA_PERIODS, REVERSE_STOCKS } from './config.js';
 import env from './env.json';
 import equities from './equities.json';
+import futures from './futures.json';
 import { getHistoricalData } from './getHistoricalData.js';
 import { getQuotes } from './getQuote.js';
 import { getInput } from './input.js';
@@ -106,83 +107,176 @@ const placeOrders = async (
     );
     return;
   }
-
   try {
-    // Get quotes
-    const quotes = await getQuotes({
-      jKey: accessToken,
-      jData: {
-        uid: env.USER_ID,
-        exch: 'NSE',
-        token: stock.token,
-      },
-    });
+    if (type === 'MIS' || type === 'CNC') {
+      // Get quotes
+      const quotes = await getQuotes({
+        jKey: accessToken,
+        jData: {
+          uid: env.USER_ID,
+          exch: 'NSE',
+          token: stock.token,
+        },
+      });
 
-    // Place entry order
-    const entryPrice = isGreenCandle ? Number(quotes.bp1) : Number(quotes.sp1);
-    const quantity = Math.floor(entryTarget / entryPrice).toString();
+      // Place entry order
+      const entryPrice = isGreenCandle
+        ? Number(quotes.bp1)
+        : Number(quotes.sp1);
+      const quantity = Math.floor(entryTarget / entryPrice).toString();
 
-    if (quantity === '0') {
-      console.log('Quantity is 0. Order not placed for', stock.tradingSymbol);
-      return;
+      if (quantity === '0') {
+        console.log('Quantity is 0. Order not placed for', stock.tradingSymbol);
+        return;
+      }
+
+      placeOrder({
+        jKey: accessToken,
+        jData: {
+          actid: env.USER_ID,
+          uid: env.USER_ID,
+          exch: 'NSE',
+          tsym: stock.tradingSymbol,
+          trantype: isGreenCandle ? 'B' : 'S',
+          prc: entryPrice.toString(),
+          qty: quantity,
+          prd: 'I',
+          prctyp: 'LMT',
+          ret: 'DAY',
+        },
+      });
+
+      // Place exit order
+      const exitPrice = isGreenCandle
+        ? (entryPrice * Number(quantity) + exitTarget) / Number(quantity)
+        : (entryPrice * Number(quantity) - exitTarget) / Number(quantity);
+      const roundedUpExitPrice = (0.05 * Math.round(exitPrice / 0.05)).toFixed(
+        2
+      );
+
+      // SL Order
+      placeOrder({
+        jKey: accessToken,
+        jData: {
+          actid: env.USER_ID,
+          uid: env.USER_ID,
+          exch: 'NSE',
+          tsym: stock.tradingSymbol,
+          trantype: isGreenCandle ? 'S' : 'B',
+          prc: triggerPrice,
+          trgprc: triggerPrice,
+          qty: quantity,
+          prd: 'I',
+          prctyp: 'SL-LMT',
+          ret: 'DAY',
+        },
+      });
+
+      // Normal Exit Order
+      placeOrder({
+        jKey: accessToken,
+        jData: {
+          actid: env.USER_ID,
+          uid: env.USER_ID,
+          exch: 'NSE',
+          tsym: stock.tradingSymbol,
+          trantype: isGreenCandle ? 'S' : 'B',
+          prc: roundedUpExitPrice,
+          qty: quantity,
+          prd: 'I',
+          prctyp: 'LMT',
+          ret: 'DAY',
+        },
+      });
+    } else if (type === 'FUTURE') {
+      const futureStock = futures.find(
+        (f) => f.symbol === stock.symbol && f.expiry.endsWith(expiry!)
+      );
+      if (!futureStock) {
+        console.log(
+          'Data issue! No corresponding future found for stock',
+          stock.symbol,
+          'and expiry',
+          expiry
+        );
+        return;
+      }
+      // Get Quotes
+      const quotes = await getQuotes({
+        jKey: accessToken,
+        jData: {
+          exch: 'NFO',
+          uid: env.USER_ID,
+          token: futureStock.token,
+        },
+      });
+
+      // Place entry order
+      const entryPrice = isGreenCandle
+        ? Number(quotes.sp1)
+        : Number(quotes.bp1);
+
+      placeOrder({
+        jKey: accessToken,
+        jData: {
+          actid: env.USER_ID,
+          uid: env.USER_ID,
+          exch: 'NFO',
+          tsym: futureStock.tradingSymbol,
+          trantype: isGreenCandle ? 'B' : 'S',
+          prc: entryPrice.toString(),
+          qty: futureStock.lotSize.toString(),
+          prd: 'M',
+          prctyp: 'LMT',
+          ret: 'DAY',
+        },
+      });
+
+      // Place exit order
+      const exitPrice = isGreenCandle
+        ? (entryPrice * futureStock.lotSize + exitTarget) / futureStock.lotSize
+        : (entryPrice * futureStock.lotSize - exitTarget) / futureStock.lotSize;
+      const roundedUpExitPrice = (0.05 * Math.round(exitPrice / 0.05)).toFixed(
+        2
+      );
+
+      const latestFutCandle = await getLatestCandle(futureStock.token);
+
+      // SL Order
+      placeOrder({
+        jKey: accessToken,
+        jData: {
+          actid: env.USER_ID,
+          uid: env.USER_ID,
+          exch: 'NSE',
+          tsym: stock.tradingSymbol,
+          trantype: isGreenCandle ? 'S' : 'B',
+          prc: latestFutCandle.into,
+          trgprc: latestFutCandle.into,
+          qty: futureStock.lotSize.toString(),
+          prd: 'M',
+          prctyp: 'SL-LMT',
+          ret: 'DAY',
+        },
+      });
+
+      // Normal Exit Order
+      placeOrder({
+        jKey: accessToken,
+        jData: {
+          actid: env.USER_ID,
+          uid: env.USER_ID,
+          exch: 'NFO',
+          tsym: stock.tradingSymbol,
+          trantype: isGreenCandle ? 'S' : 'B',
+          prc: roundedUpExitPrice,
+          qty: futureStock.lotSize.toString(),
+          prd: 'M',
+          prctyp: 'LMT',
+          ret: 'DAY',
+        },
+      });
     }
-
-    placeOrder({
-      jKey: accessToken,
-      jData: {
-        actid: env.USER_ID,
-        uid: env.USER_ID,
-        exch: 'NSE',
-        tsym: stock.tradingSymbol,
-        trantype: isGreenCandle ? 'B' : 'S',
-        prc: entryPrice.toString(),
-        qty: quantity,
-        prd: 'I',
-        prctyp: 'LMT',
-        ret: 'DAY',
-      },
-    });
-
-    // Place exit order
-    const exitPrice = isGreenCandle
-      ? (entryPrice * Number(quantity) + exitTarget) / Number(quantity)
-      : (entryPrice * Number(quantity) - exitTarget) / Number(quantity);
-    const roundedUpExitPrice = (0.05 * Math.round(exitPrice / 0.05)).toFixed(2);
-
-    // SL Order
-    placeOrder({
-      jKey: accessToken,
-      jData: {
-        actid: env.USER_ID,
-        uid: env.USER_ID,
-        exch: 'NSE',
-        tsym: stock.tradingSymbol,
-        trantype: isGreenCandle ? 'S' : 'B',
-        prc: triggerPrice,
-        trgprc: triggerPrice,
-        qty: quantity,
-        prd: 'I',
-        prctyp: 'SL-LMT',
-        ret: 'DAY',
-      },
-    });
-
-    // Normal Exit Order
-    placeOrder({
-      jKey: accessToken,
-      jData: {
-        actid: env.USER_ID,
-        uid: env.USER_ID,
-        exch: 'NSE',
-        tsym: stock.tradingSymbol,
-        trantype: isGreenCandle ? 'S' : 'B',
-        prc: roundedUpExitPrice,
-        qty: quantity,
-        prd: 'I',
-        prctyp: 'LMT',
-        ret: 'DAY',
-      },
-    });
   } catch (error) {
     console.error(
       `Some error occured while placing orders for ${stock.tradingSymbol}:`,

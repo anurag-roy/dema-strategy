@@ -1,7 +1,9 @@
 import { writeFileSync } from 'fs';
 import JSZip from 'jszip';
-import { EXPIRY, STOCKS_TO_EXCLUDE } from './config.js';
+import { STOCKS_TO_EXCLUDE } from './config.js';
+import { getExpiryOptions } from './utils.js';
 
+const expiryOptions = getExpiryOptions();
 const txtFileName = 'NFO_symbols.txt';
 const zipFileName = txtFileName + '.zip';
 
@@ -16,7 +18,8 @@ if (!file) {
   process.exit(1);
 }
 
-const output = [];
+const futures = [];
+const options = [];
 
 const fileContents = await file.async('text');
 const rows = fileContents.split('\n').slice(1);
@@ -30,26 +33,44 @@ for (const row of rows) {
     tradingSymbol,
     expiry,
     instrument,
-    _optiontype,
-    _strikePrice,
+    optiontype,
+    strikePrice,
     _tickSize,
   ] = row.split(',');
-
   if (
-    instrument === 'FUTSTK' &&
     !STOCKS_TO_EXCLUDE.includes(symbol) &&
-    expiry.endsWith(EXPIRY)
+    expiryOptions.some((e) => expiry?.endsWith(e))
   ) {
-    output.push({
-      token,
-      lotSize: Number(lotSize),
-      symbol,
-      tradingSymbol,
-    });
+    if (instrument === 'FUTSTK') {
+      futures.push({
+        token,
+        lotSize: Number(lotSize),
+        symbol,
+        tradingSymbol,
+        expiry,
+      });
+    } else if (instrument === 'OPTSTK' && expiry?.endsWith(expiryOptions[0])) {
+      options.push({
+        token,
+        lotSize: Number(lotSize),
+        symbol,
+        tradingSymbol,
+        optiontype,
+        strikePrice: Number(strikePrice),
+      });
+    }
   }
 }
 
-output.sort((fut1, fut2) =>
+futures.sort((fut1, fut2) =>
   fut1.tradingSymbol.localeCompare(fut2.tradingSymbol)
 );
-writeFileSync('futures.json', JSON.stringify(output));
+writeFileSync('futures.json', JSON.stringify(futures));
+
+options.sort(
+  (opt1, opt2) =>
+    opt1.tradingSymbol.localeCompare(opt2.tradingSymbol) ||
+    opt2.strikePrice - opt1.strikePrice ||
+    opt1.optiontype.localeCompare(opt2.optiontype)
+);
+writeFileSync('options.json', JSON.stringify(options));

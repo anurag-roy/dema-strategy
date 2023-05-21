@@ -1,7 +1,5 @@
 export const DEMA_PERIODS = [10, 20, 30, 40, 50, 60, 70, 80];
 
-export const EXPIRY = 'MAY-2023';
-
 export const REVERSE_STOCKS = ['NATIONALUM', 'RBLBANK', 'TRENT'];
 
 export const STOCKS_TO_EXCLUDE = [
