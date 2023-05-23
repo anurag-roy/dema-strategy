@@ -22,10 +22,20 @@ export const getInput = async () => {
           });
         }
       },
-      entryTarget: () =>
-        text({
-          message: 'Entry target',
-        }),
+      entryQuantity: ({ results }) => {
+        if (results.type === STRATEGY_TYPE.FUTURE) {
+          return text({
+            message: 'Entry quantity',
+          });
+        }
+      },
+      entryTarget: ({ results }) => {
+        if (results.type !== STRATEGY_TYPE.FUTURE) {
+          return text({
+            message: 'Entry target',
+          });
+        }
+      },
       exitTarget: () =>
         text({
           message: 'Exit target',
@@ -57,15 +67,17 @@ export const getInput = async () => {
   );
   outro(`Starting strategy for ${groupResults.type}...`);
 
-  const { entryTarget, exitTarget, ...rest } = groupResults;
+  const { entryTarget, exitTarget, entryQuantity, ...rest } = groupResults;
 
   return {
-    entryTarget: parseFloat(entryTarget),
+    entryQuantity: parseFloat(entryQuantity as string),
+    entryTarget: parseFloat(entryTarget as string),
     exitTarget: parseFloat(exitTarget),
     ...rest,
   } as {
     type: StrategyType;
     expiry: string | undefined;
+    entryQuantity: number;
     entryTarget: number;
     exitTarget: number;
     period1: number;

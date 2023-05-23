@@ -11,7 +11,7 @@ import { getHistoricalData } from './getHistoricalData.js';
 import { getQuotes } from './getQuote.js';
 import { getInput } from './input.js';
 import { placeOrder } from './placeOrder.js';
-import { CandleWithDema } from './types.js';
+import { CandleWithDema, Exchange } from './types.js';
 import {
   FIFTEEN_MINUTES_IN_MS,
   getDemaValuesFromCandle,
@@ -48,8 +48,16 @@ for (const equity of equities) {
   stockToCandleMap.set(equity.symbol, candles);
 }
 
-const { type, expiry, entryTarget, exitTarget, period1, period2, period3 } =
-  await getInput();
+const {
+  type,
+  expiry,
+  entryQuantity,
+  entryTarget,
+  exitTarget,
+  period1,
+  period2,
+  period3,
+} = await getInput();
 const demaPeriods = [period1, period2, period3] as [number, number, number];
 const lastTimes = new Set<string>();
 
@@ -76,7 +84,7 @@ console.log('Last times are', lastTimes);
 console.log('Initial candleAStocks', candleAStocks);
 console.log('Initial candleBStocks', candleBStocks);
 
-const getLatestCandle = async (instrumentToken: string) => {
+const getLatestCandle = async (instrumentToken: string, exchange: Exchange) => {
   const now = Date.now();
   const startTime = (now - FIFTEEN_MINUTES_IN_MS - 1 * 60 * 1000)
     .toString()
@@ -85,7 +93,7 @@ const getLatestCandle = async (instrumentToken: string) => {
     jKey: accessToken,
     jData: {
       uid: env.USER_ID,
-      exch: 'NSE',
+      exch: exchange,
       token: instrumentToken,
       st: startTime,
       et: now.toString().slice(0, -3),
@@ -213,9 +221,9 @@ const placeOrders = async (
 
       // Place entry order
       const entryPrice = isGreenCandle
-        ? Number(quotes.sp1)
-        : Number(quotes.bp1);
-
+        ? Number(quotes.bp1)
+        : Number(quotes.sp1);
+      const quantity = futureStock.lotSize * entryQuantity;
       placeOrder({
         jKey: accessToken,
         jData: {
@@ -225,7 +233,7 @@ const placeOrders = async (
           tsym: futureStock.tradingSymbol,
           trantype: isGreenCandle ? 'B' : 'S',
           prc: entryPrice.toString(),
-          qty: futureStock.lotSize.toString(),
+          qty: quantity.toString(),
           prd: 'M',
           prctyp: 'LMT',
           ret: 'DAY',
@@ -234,13 +242,13 @@ const placeOrders = async (
 
       // Place exit order
       const exitPrice = isGreenCandle
-        ? (entryPrice * futureStock.lotSize + exitTarget) / futureStock.lotSize
-        : (entryPrice * futureStock.lotSize - exitTarget) / futureStock.lotSize;
+        ? (entryPrice * quantity + exitTarget) / quantity
+        : (entryPrice * quantity - exitTarget) / quantity;
       const roundedUpExitPrice = (0.05 * Math.round(exitPrice / 0.05)).toFixed(
         2
       );
 
-      const latestFutCandle = await getLatestCandle(futureStock.token);
+      const latestFutCandle = await getLatestCandle(futureStock.token, 'NFO');
 
       // SL Order
       placeOrder({
@@ -248,12 +256,12 @@ const placeOrders = async (
         jData: {
           actid: env.USER_ID,
           uid: env.USER_ID,
-          exch: 'NSE',
+          exch: 'NFO',
           tsym: stock.tradingSymbol,
           trantype: isGreenCandle ? 'S' : 'B',
           prc: latestFutCandle.into,
           trgprc: latestFutCandle.into,
-          qty: futureStock.lotSize.toString(),
+          qty: quantity.toString(),
           prd: 'M',
           prctyp: 'SL-LMT',
           ret: 'DAY',
@@ -270,7 +278,7 @@ const placeOrders = async (
           tsym: stock.tradingSymbol,
           trantype: isGreenCandle ? 'S' : 'B',
           prc: roundedUpExitPrice,
-          qty: futureStock.lotSize.toString(),
+          qty: quantity.toString(),
           prd: 'M',
           prctyp: 'LMT',
           ret: 'DAY',
@@ -302,7 +310,7 @@ const checkCandles = async () => {
 
         // TODO: Place order for Candle B stocks (Only possible for last day candles, for which order needs to be placed st 9:15)
 
-        const latestCandle = await getLatestCandle(stock.token);
+        const latestCandle = await getLatestCandle(stock.token, 'NSE');
         if (latestCandle) {
           // TODO: Create a function to calculate DEMA values from previous candle instead of requiring all 1000 historical candle data
           const latestCandleWithDema: CandleWithDema = {
@@ -361,7 +369,7 @@ const checkCandles = async () => {
     }
 
     const stock = stockMap.get(stockName)!;
-    const latestCandle = await getLatestCandle(stock.token);
+    const latestCandle = await getLatestCandle(stock.token, 'NSE');
     if (latestCandle) {
       const latestCandleWithDema: CandleWithDema = {
         time: latestCandle.time,
