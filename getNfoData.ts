@@ -49,7 +49,7 @@ for (const row of rows) {
         tradingSymbol,
         expiry,
       });
-    } else if (instrument === 'OPTSTK' && expiry?.endsWith(expiryOptions[0])) {
+    } else if (instrument === 'OPTSTK') {
       options.push({
         token,
         lotSize: Number(lotSize),
@@ -57,6 +57,7 @@ for (const row of rows) {
         tradingSymbol,
         optiontype,
         strikePrice: Number(strikePrice),
+        expiry,
       });
     }
   }

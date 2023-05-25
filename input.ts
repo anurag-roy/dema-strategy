@@ -15,7 +15,10 @@ export const getInput = async () => {
           options: Object.values(STRATEGY_TYPE).map(optionMapper),
         }),
       expiry: ({ results }) => {
-        if (results.type === STRATEGY_TYPE.FUTURE) {
+        if (
+          results.type === STRATEGY_TYPE.FUTURE ||
+          results.type === STRATEGY_TYPE.OPTION
+        ) {
           return select({
             message: 'Expiry',
             options: getExpiryOptions().map(optionMapper),

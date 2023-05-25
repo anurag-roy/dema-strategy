@@ -301,7 +301,10 @@ const placeOrders = async (
       const optionType = isGreenCandle ? 'PE' : 'CE';
 
       const optionStocks = options.filter(
-        (o) => o.symbol === stock.symbol && o.optiontype === optionType
+        (o) =>
+          o.symbol === stock.symbol &&
+          o.expiry.endsWith(expiry) &&
+          o.optiontype === optionType
       );
       const [nearestStock] = optionStocks.sort(
         (s1, s2) =>
