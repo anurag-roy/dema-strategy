@@ -10,6 +10,7 @@ import futures from './futures.json';
 import { getHistoricalData } from './getHistoricalData.js';
 import { getQuotes } from './getQuote.js';
 import { getInput } from './input.js';
+import options from './options.json';
 import { placeOrder } from './placeOrder.js';
 import { CandleWithDema, Exchange } from './types.js';
 import {
@@ -277,6 +278,79 @@ const placeOrders = async (
           exch: 'NFO',
           tsym: futureStock.tradingSymbol,
           trantype: isGreenCandle ? 'S' : 'B',
+          prc: roundedUpExitPrice,
+          qty: quantity.toString(),
+          prd: 'M',
+          prctyp: 'LMT',
+          ret: 'DAY',
+        },
+      });
+    } else if (type === 'OPTION') {
+      // Get quotes
+      const equityQuotes = await getQuotes({
+        jKey: accessToken,
+        jData: {
+          uid: env.USER_ID,
+          exch: 'NSE',
+          token: stock.token,
+        },
+      });
+
+      const equityLtp = Number(equityQuotes.lp);
+      const target = isGreenCandle ? 0.85 * equityLtp : 1.15 * equityLtp;
+      const optionType = isGreenCandle ? 'PE' : 'CE';
+
+      const optionStocks = options.filter(
+        (o) => o.symbol === stock.symbol && o.optiontype === optionType
+      );
+      const [nearestStock] = optionStocks.sort(
+        (s1, s2) =>
+          Math.abs(target - s1.strikePrice) - Math.abs(target - s2.strikePrice)
+      );
+
+      const optionQuotes = await getQuotes({
+        jKey: accessToken,
+        jData: {
+          uid: env.USER_ID,
+          exch: 'NFO',
+          token: nearestStock.token,
+        },
+      });
+
+      // Place entry order
+      const entryPrice = Number(optionQuotes.sp1);
+      const quantity = nearestStock.lotSize * entryQuantity;
+      placeOrder({
+        jKey: accessToken,
+        jData: {
+          actid: env.USER_ID,
+          uid: env.USER_ID,
+          exch: 'NFO',
+          tsym: nearestStock.tradingSymbol,
+          trantype: 'S',
+          prc: entryPrice.toString(),
+          qty: quantity.toString(),
+          prd: 'M',
+          prctyp: 'LMT',
+          ret: 'DAY',
+        },
+      });
+
+      // Place exit order
+      const exitPrice = (entryPrice * quantity - exitTarget) / quantity;
+      const roundedUpExitPrice = (0.05 * Math.round(exitPrice / 0.05)).toFixed(
+        2
+      );
+
+      // Normal Exit Order
+      placeOrder({
+        jKey: accessToken,
+        jData: {
+          actid: env.USER_ID,
+          uid: env.USER_ID,
+          exch: 'NFO',
+          tsym: nearestStock.tradingSymbol,
+          trantype: 'B',
           prc: roundedUpExitPrice,
           qty: quantity.toString(),
           prd: 'M',

@@ -23,14 +23,20 @@ export const getInput = async () => {
         }
       },
       entryQuantity: ({ results }) => {
-        if (results.type === STRATEGY_TYPE.FUTURE) {
+        if (
+          results.type === STRATEGY_TYPE.FUTURE ||
+          results.type === STRATEGY_TYPE.OPTION
+        ) {
           return text({
             message: 'Entry quantity',
           });
         }
       },
       entryTarget: ({ results }) => {
-        if (results.type !== STRATEGY_TYPE.FUTURE) {
+        if (
+          results.type === STRATEGY_TYPE.MIS ||
+          results.type === STRATEGY_TYPE.CNC
+        ) {
           return text({
             message: 'Entry target',
           });
