@@ -320,6 +320,13 @@ const placeOrders = async (
         },
       });
 
+      if (!('sp1' in optionQuotes)) {
+        console.log(
+          `Seller not not present for ${nearestStock.tradingSymbol}. Ignoring...`
+        );
+        return;
+      }
+
       // Place entry order
       const entryPrice = Number(optionQuotes.sp1);
       const quantity = nearestStock.lotSize * entryQuantity;
